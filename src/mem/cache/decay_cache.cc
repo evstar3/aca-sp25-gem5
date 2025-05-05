@@ -50,7 +50,7 @@ namespace gem5
 {
 
 DecayCache::DecayCache(const DecayCacheParams &p)
-    : Cache(p)
+    : NoncoherentCache(p)
 {
 
 }

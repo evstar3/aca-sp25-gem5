@@ -46,7 +46,7 @@
 #ifndef __MEM_CACHE_DECAY_CACHE_HH__
 #define __MEM_CACHE_DECAY_CACHE_HH__
 
-#include "mem/cache/cache.hh"
+#include "mem/cache/noncoherent_cache.hh"
 #include "params/DecayCache.hh"
 
 namespace gem5
@@ -55,7 +55,7 @@ namespace gem5
 /**
  * A coherent decay cache that can be arranged in flexible topologies.
  */
-class DecayCache : public Cache
+class DecayCache : public NoncoherentCache
 {
   public:
     /** Instantiates a basic cache object. */
