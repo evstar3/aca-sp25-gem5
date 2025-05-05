@@ -1,5 +1,4 @@
-# -*- mode:python -*-
-# Copyright (c) 2023-2024 ARM Limited
+# Copyright (c) 2012-2013, 2015, 2018, 2023-2024 ARM Limited
 # All rights reserved.
 #
 # The license below extends only to copyright in the software and shall
@@ -11,7 +10,7 @@
 # unmodified and in its entirety in all distributions of the software,
 # modified or unmodified, in source code or in binary form.
 #
-# Copyright (c) 2006 The Regents of The University of Michigan
+# Copyright (c) 2005-2007 The Regents of The University of Michigan
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -37,38 +36,10 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-Import('*')
+from m5.params import *
+from m5.objects import Cache
 
-SimObject('Cache.py', sim_objects=[
-    'WriteAllocator', 'BaseCache', 'Cache', 'NoncoherentCache'],
-    enums=['Clusivity'])
-
-Source('base.cc')
-Source('cache.cc')
-Source('cache_blk.cc')
-Source('mshr.cc')
-Source('mshr_queue.cc')
-Source('noncoherent_cache.cc')
-Source('write_queue.cc')
-Source('write_queue_entry.cc')
-
-DebugFlag('Cache')
-DebugFlag('CacheComp')
-DebugFlag('CachePort')
-DebugFlag('CacheRepl')
-DebugFlag('CacheTags')
-DebugFlag('CacheVerbose')
-DebugFlag('HWPrefetch')
-DebugFlag('MSHR')
-DebugFlag('HWPrefetchQueue')
-DebugFlag('PartitionPolicy')
-
-# CacheTags is so outrageously verbose, printing the cache's entire tag
-# array on each timing access, that you should probably have to ask for
-# it explicitly even above and beyond CacheAll.
-CompoundFlag('CacheAll', ['Cache', 'CacheComp', 'CachePort', 'CacheRepl',
-                          'CacheVerbose', 'HWPrefetch', 'MSHR',
-                          'PartitionPolicy'])
-
-SimObject('DecayCache.py', sim_objects=['DecayCache'])
-Source('decay_cache.cc')
+class DecayCache(Cache):
+    type = "DecayCache"
+    cxx_header = "mem/cache/decay_cache.hh"
+    cxx_class = "gem5::DecayCache"

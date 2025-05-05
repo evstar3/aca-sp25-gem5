@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 ARM Limited
+ * Copyright (c) 2010-2019, 2024 ARM Limited
  * All rights reserved.
  *
  * The license below extends only to copyright in the software and shall
@@ -12,6 +12,7 @@
  * modified or unmodified, in source code or in binary form.
  *
  * Copyright (c) 2002-2005 The Regents of The University of Michigan
+ * Copyright (c) 2010,2015 Advanced Micro Devices, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,28 +41,18 @@
 
 /**
  * @file
- * Describes a decay cache
+ * Cache definitions.
  */
 
-#ifndef __MEM_CACHE_DECAY_CACHE_HH__
-#define __MEM_CACHE_DECAY_CACHE_HH__
-
-#include "mem/cache/cache.hh"
-#include "params/DecayCache.hh"
+#include "mem/cache/decay_cache.hh"
 
 namespace gem5
 {
 
-/**
- * A coherent decay cache that can be arranged in flexible topologies.
- */
-class DecayCache : public Cache
+DecayCache::DecayCache(const DecayCacheParams &p)
+    : Cache(p)
 {
-  public:
-    /** Instantiates a basic cache object. */
-    DecayCache(const DecayCacheParams &p);
-};
+
+}
 
 } // namespace gem5
-
-#endif // __MEM_CACHE_DECAY_CACHE_HH__
