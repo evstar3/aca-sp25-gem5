@@ -46,6 +46,7 @@
 #ifndef __MEM_CACHE_DECAY_CACHE_HH__
 #define __MEM_CACHE_DECAY_CACHE_HH__
 
+#include "base/types.hh"
 #include "mem/cache/noncoherent_cache.hh"
 #include "params/DecayCache.hh"
 
@@ -57,9 +58,18 @@ namespace gem5
  */
 class DecayCache : public NoncoherentCache
 {
+  protected:
+    std::unordered_map<Addr, Cycles> lastAccessStore;
+
   public:
-    /** Instantiates a basic cache object. */
     DecayCache(const DecayCacheParams &p);
+
+  protected:
+    bool access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
+                PacketList &writebacks) override;
+
+  private:
+    PacketPtr decayTimeout(PacketPtr pkt, CacheBlk *blk);
 };
 
 } // namespace gem5

@@ -52,7 +52,34 @@ namespace gem5
 DecayCache::DecayCache(const DecayCacheParams &p)
     : NoncoherentCache(p)
 {
+}
 
+bool
+DecayCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
+                         PacketList &writebacks)
+{
+    bool success = NoncoherentCache::access(pkt, blk, lat, writebacks);
+
+    lastAccessStore[pkt->getBlockAddr(blkSize)] = curCycle();
+
+    schedule(
+        new EventFunctionWrapper(
+            [this, pkt, blk] { decayTimeout(pkt, blk); },
+            name() + ".decayTimeout"
+        ),
+        cyclesToTicks(curCycle() + Cycles(10000))
+    );
+
+    return success;
+}
+
+PacketPtr
+DecayCache::decayTimeout(PacketPtr pkt, CacheBlk *blk)
+{
+    if (curCycle() - lastAccessStore[pkt->getBlockAddr(blkSize)] == 10000)
+        return NoncoherentCache::evictBlock(blk);
+
+    return nullptr;
 }
 
 } // namespace gem5
