@@ -46,7 +46,9 @@
 #ifndef __MEM_CACHE_DECAY_CACHE_HH__
 #define __MEM_CACHE_DECAY_CACHE_HH__
 
+#include "base/trace.hh"
 #include "base/types.hh"
+#include "debug/DecayCache.hh"
 #include "mem/cache/noncoherent_cache.hh"
 #include "params/DecayCache.hh"
 
@@ -69,7 +71,7 @@ class DecayCache : public NoncoherentCache
                 PacketList &writebacks) override;
 
   private:
-    PacketPtr decayTimeout(PacketPtr pkt, CacheBlk *blk);
+    PacketPtr processDecayTimeout(Addr blkAddr);
 };
 
 } // namespace gem5

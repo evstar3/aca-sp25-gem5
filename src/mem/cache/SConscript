@@ -72,3 +72,4 @@ CompoundFlag('CacheAll', ['Cache', 'CacheComp', 'CachePort', 'CacheRepl',
 
 SimObject('DecayCache.py', sim_objects=['DecayCache'])
 Source('decay_cache.cc')
+DebugFlag('DecayCache')

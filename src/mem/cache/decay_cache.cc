@@ -58,28 +58,38 @@ bool
 DecayCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
                          PacketList &writebacks)
 {
+    DPRINTF(DecayCache, "Accessing DecayCache\n");
     bool success = NoncoherentCache::access(pkt, blk, lat, writebacks);
 
-    lastAccessStore[pkt->getBlockAddr(blkSize)] = curCycle();
+    Addr blkAddr = pkt->getBlockAddr(blkSize);
+    lastAccessStore[blkAddr] = curCycle();
+    DPRINTF(DecayCache, "set lastAccessStore[%u] = %u\n", blkAddr, curCycle());
 
-    schedule(
-        new EventFunctionWrapper(
-            [this, pkt, blk] { decayTimeout(pkt, blk); },
-            name() + ".decayTimeout"
-        ),
-        cyclesToTicks(curCycle() + Cycles(10000))
+    auto e = new EventFunctionWrapper(
+        [this, blkAddr]{ processDecayTimeout(blkAddr); },
+        name() + ".decayTimeout"
     );
+        
+    schedule(e, cyclesToTicks(curCycle() + Cycles(10000)));
 
     return success;
 }
 
 PacketPtr
-DecayCache::decayTimeout(PacketPtr pkt, CacheBlk *blk)
+DecayCache::processDecayTimeout(Addr blkAddr)
 {
-    if (curCycle() - lastAccessStore[pkt->getBlockAddr(blkSize)] == 10000)
-        return NoncoherentCache::evictBlock(blk);
+    DPRINTF(DecayCache, "timeout for %u\n", blkAddr);
 
-    return nullptr;
+    PacketPtr retval = nullptr;
+
+    if (curCycle() - lastAccessStore[blkAddr] >= 10000)
+    {
+        CacheBlk *blk = tags->findBlock({blkAddr, false});
+        DPRINTF(DecayCache, "evicting %s\n", blk->print());
+        retval = NoncoherentCache::evictBlock(blk);
+    }
+
+    return retval;
 }
 
 } // namespace gem5
