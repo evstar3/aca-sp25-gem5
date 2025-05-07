@@ -58,12 +58,10 @@ bool
 DecayCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
                          PacketList &writebacks)
 {
-    DPRINTF(DecayCache, "Accessing DecayCache\n");
     bool success = NoncoherentCache::access(pkt, blk, lat, writebacks);
 
     Addr blkAddr = pkt->getBlockAddr(blkSize);
     lastAccessStore[blkAddr] = curCycle();
-    DPRINTF(DecayCache, "set lastAccessStore[%u] = %u\n", blkAddr, curCycle());
 
     auto e = new EventFunctionWrapper(
         [this, blkAddr]{ processDecayTimeout(blkAddr); },
@@ -78,15 +76,23 @@ DecayCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
 PacketPtr
 DecayCache::processDecayTimeout(Addr blkAddr)
 {
-    DPRINTF(DecayCache, "timeout for %u\n", blkAddr);
-
     PacketPtr retval = nullptr;
 
-    if (curCycle() - lastAccessStore[blkAddr] >= 10000)
+    Cycles now = curCycle();
+    Cycles last_access = lastAccessStore[blkAddr];
+    Cycles diff = now - last_access;
+
+    if (diff >= 10000)
     {
         CacheBlk *blk = tags->findBlock({blkAddr, false});
-        DPRINTF(DecayCache, "evicting %s\n", blk->print());
+        DPRINTF(DecayCache, "DecayCache timeout, evicting block at %x. Now=%u, LastAccess=%u, Diff=%u\n",
+                blkAddr, now, last_access, diff);
         retval = NoncoherentCache::evictBlock(blk);
+    }
+    else
+    {
+        DPRINTF(DecayCache, "DecayCache timeout, keeping block at %x. Now=%u, LastAccess=%u, Diff=%u\n",
+                blkAddr, now, last_access, diff);
     }
 
     return retval;
