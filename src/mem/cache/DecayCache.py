@@ -43,3 +43,6 @@ class DecayCache(NoncoherentCache):
     type = "DecayCache"
     cxx_header = "mem/cache/decay_cache.hh"
     cxx_class = "gem5::DecayCache"
+
+    alive_tick_period = Param.Cycles((2**13)/4, 'alive tick period for decay cache')
+    dead_tick_periods = VectorParam.Cycles([(2**13)/4], 'list of dead tick periods for exponential backoff for decay cache')

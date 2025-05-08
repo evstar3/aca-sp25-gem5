@@ -50,8 +50,33 @@ namespace gem5
 {
 
 DecayCache::DecayCache(const DecayCacheParams &p)
-    : NoncoherentCache(p)
+    : NoncoherentCache(p),
+      aliveTickPeriod(p.alive_tick_period),
+      deadTickPeriods(p.dead_tick_periods)
 {
+    // initialize block states
+    tags->forEachBlk([this](CacheBlk &blk){
+        blkStates[blk.getTag()] = BlockState();
+    });
+}
+
+void
+DecayCache::startup()
+{
+    // schedule alive tick
+    schedule(
+        new EventFunctionWrapper([this] { processGlobalTick(true, 0); }, name() + ".aliveGlobalTick"),
+        cyclesToTicks(Cycles(aliveTickPeriod))
+    );
+
+    // schedule each dead tick
+    for (uint8_t index = 0; index < deadTickPeriods.size(); ++index)
+    {
+        schedule(
+            new EventFunctionWrapper([this, index] { processGlobalTick(false, index); }, name() + ".deadGlobalTick"),
+            cyclesToTicks(Cycles(deadTickPeriods[index]))
+        );
+    }
 }
 
 bool
@@ -60,42 +85,72 @@ DecayCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
 {
     bool success = NoncoherentCache::access(pkt, blk, lat, writebacks);
 
-    Addr blkAddr = pkt->getBlockAddr(blkSize);
-    lastAccessStore[blkAddr] = curCycle();
+    BlockState *p = &blkStates[blk->getTag()];
 
-    auto e = new EventFunctionWrapper(
-        [this, blkAddr]{ processDecayTimeout(blkAddr); },
-        name() + ".decayTimeout"
-    );
-        
-    schedule(e, cyclesToTicks(curCycle() + Cycles(10000)));
+    if (!p->alive)
+    {
+        if (p->counter == 3)
+            p->deadTickIndex = std::min<std::size_t>(deadTickPeriods.size() - 1, p->deadTickIndex + 1);
+        else if (p->counter == 0)
+            p->deadTickIndex = std::max(0, p->deadTickIndex - 1);
+
+        p->alive = true;
+    }
+
+    p->counter = 0;
 
     return success;
 }
 
-PacketPtr
-DecayCache::processDecayTimeout(Addr blkAddr)
+void
+DecayCache::processGlobalTick(bool alive, uint8_t index)
 {
-    PacketPtr retval = nullptr;
+    unsigned i = 1;
 
-    Cycles now = curCycle();
-    Cycles last_access = lastAccessStore[blkAddr];
-    Cycles diff = now - last_access;
+    // schedule cascading counter updates
+    tags->forEachBlk(
+        [this, alive, index, &i](CacheBlk &blk) {
+            BlockState state = blkStates[blk.getTag()];
 
-    if (diff >= 10000)
+            // only update counter if this global tick matches the state of the block
+            if (state.alive != alive)
+                return;
+
+            // only update counter if this global tick is at the rate of the dead block
+            if (!state.alive && state.deadTickIndex != index)
+                return;
+
+            schedule(
+                new EventFunctionWrapper([this, &blk] { updateCounter(&blk); }, name() + ".updateCounter"),
+                cyclesToTicks(curCycle() + Cycles(i))
+            );
+            ++i;
+        }
+    );
+
+    // schedule the next tick
+    schedule(
+        new EventFunctionWrapper(
+            [this, alive, index] { processGlobalTick(alive, index); },
+            name() + (alive ? ".alive" : ".dead") + "GlobalTick"
+        ),
+        cyclesToTicks(curCycle() + Cycles(alive ? aliveTickPeriod : deadTickPeriods[index]))
+    );
+}
+
+void
+DecayCache::updateCounter(CacheBlk *blk)
+{
+    BlockState *p = &blkStates[blk->getTag()];
+
+    if (p->alive && p->counter == 3)
     {
-        CacheBlk *blk = tags->findBlock({blkAddr, false});
-        DPRINTF(DecayCache, "DecayCache timeout, evicting block at %x. Now=%u, LastAccess=%u, Diff=%u\n",
-                blkAddr, now, last_access, diff);
-        retval = NoncoherentCache::evictBlock(blk);
-    }
-    else
-    {
-        DPRINTF(DecayCache, "DecayCache timeout, keeping block at %x. Now=%u, LastAccess=%u, Diff=%u\n",
-                blkAddr, now, last_access, diff);
+        p->counter = 0;
+        p->alive = false;
+        (void)NoncoherentCache::evictBlock(blk);
     }
 
-    return retval;
+    p->counter = std::min(3, p->counter + 1);
 }
 
 } // namespace gem5

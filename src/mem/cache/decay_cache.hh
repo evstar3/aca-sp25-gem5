@@ -56,22 +56,33 @@ namespace gem5
 {
 
 /**
- * A coherent decay cache that can be arranged in flexible topologies.
+ * A decay cache that can be arranged in flexible topologies.
  */
 class DecayCache : public NoncoherentCache
 {
   protected:
-    std::unordered_map<Addr, Cycles> lastAccessStore;
+    struct BlockState
+    {
+        uint8_t counter;
+        uint8_t deadTickIndex;
+        bool alive;
+    };
+
+    std::unordered_map<Addr, BlockState> blkStates;
+    Cycles aliveTickPeriod;
+    std::vector<Cycles> deadTickPeriods;
 
   public:
     DecayCache(const DecayCacheParams &p);
+    void startup() override;
 
   protected:
     bool access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
                 PacketList &writebacks) override;
 
   private:
-    PacketPtr processDecayTimeout(Addr blkAddr);
+    void processGlobalTick(bool alive, uint8_t index);
+    void updateCounter(CacheBlk *blk);
 };
 
 } // namespace gem5
