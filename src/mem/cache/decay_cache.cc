@@ -50,14 +50,10 @@ namespace gem5
 {
 
 DecayCache::DecayCache(const DecayCacheParams &p)
-    : NoncoherentCache(p),
+    : Cache(p),
       aliveTickPeriod(p.alive_tick_period),
       deadTickPeriods(p.dead_tick_periods)
 {
-    // initialize block states
-    tags->forEachBlk([this](CacheBlk &blk){
-        blkStates[blk.getTag()] = BlockState();
-    });
 }
 
 void
@@ -83,9 +79,22 @@ bool
 DecayCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
                          PacketList &writebacks)
 {
-    bool success = NoncoherentCache::access(pkt, blk, lat, writebacks);
+    bool success = Cache::access(pkt, blk, lat, writebacks);
+    if (!success)
+        return false;
 
-    BlockState *p = &blkStates[blk->getTag()];
+    assert(blk);
+
+    auto search = blkStates.find(blk); 
+    if (search == blkStates.end())
+    {
+        // first access
+        blkStates[blk] = BlockState();
+        return true;
+    }
+
+    // block already exists
+    BlockState *p = &search->second;
 
     if (!p->alive)
     {
@@ -99,7 +108,7 @@ DecayCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
 
     p->counter = 0;
 
-    return success;
+    return true;
 }
 
 void
@@ -110,7 +119,7 @@ DecayCache::processGlobalTick(bool alive, uint8_t index)
     // schedule cascading counter updates
     tags->forEachBlk(
         [this, alive, index, &i](CacheBlk &blk) {
-            BlockState state = blkStates[blk.getTag()];
+            BlockState state = blkStates[&blk];
 
             // only update counter if this global tick matches the state of the block
             if (state.alive != alive)
@@ -141,13 +150,22 @@ DecayCache::processGlobalTick(bool alive, uint8_t index)
 void
 DecayCache::updateCounter(CacheBlk *blk)
 {
-    BlockState *p = &blkStates[blk->getTag()];
+    BlockState *p = &blkStates[blk];
 
     if (p->alive && p->counter == 3)
     {
         p->counter = 0;
         p->alive = false;
-        (void)NoncoherentCache::evictBlock(blk);
+
+        if (blk->isValid())
+        {
+            PacketList writebacks;
+            PacketPtr pkt = Cache::evictBlock(blk);
+            if (pkt) {
+                writebacks.push_back(pkt);
+            }
+            doWritebacks(writebacks, 0);
+        }
     }
 
     p->counter = std::min(3, p->counter + 1);

@@ -49,7 +49,7 @@
 #include "base/trace.hh"
 #include "base/types.hh"
 #include "debug/DecayCache.hh"
-#include "mem/cache/noncoherent_cache.hh"
+#include "mem/cache/cache.hh"
 #include "params/DecayCache.hh"
 
 namespace gem5
@@ -58,17 +58,17 @@ namespace gem5
 /**
  * A decay cache that can be arranged in flexible topologies.
  */
-class DecayCache : public NoncoherentCache
+class DecayCache : public Cache
 {
   protected:
     struct BlockState
     {
-        uint8_t counter;
-        uint8_t deadTickIndex;
-        bool alive;
+        uint8_t counter = 0;
+        uint8_t deadTickIndex = 0;
+        bool alive = true;
     };
 
-    std::unordered_map<Addr, BlockState> blkStates;
+    std::unordered_map<CacheBlk *, BlockState> blkStates;
     Cycles aliveTickPeriod;
     std::vector<Cycles> deadTickPeriods;
 

@@ -37,9 +37,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from m5.params import *
-from m5.objects import NoncoherentCache
+from m5.objects import Cache
 
-class DecayCache(NoncoherentCache):
+class DecayCache(Cache):
     type = "DecayCache"
     cxx_header = "mem/cache/decay_cache.hh"
     cxx_class = "gem5::DecayCache"
