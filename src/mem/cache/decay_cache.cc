@@ -89,6 +89,7 @@ DecayCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
     if (search == blkStates.end())
     {
         // first access
+        DPRINTF(DecayCache, "init BlockState for %x\n", pkt->getBlockAddr(blkSize));
         blkStates[blk] = BlockState();
         return true;
     }
@@ -98,10 +99,17 @@ DecayCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
 
     if (!p->alive)
     {
+        DPRINTF(DecayCache, "Accessing dead block at %x\n", pkt->getBlockAddr(blkSize));
         if (p->counter == 3)
+        {
+            DPRINTF(DecayCache, "Counter == 3, increasing deadTickIndex\n");
             p->deadTickIndex = std::min<std::size_t>(deadTickPeriods.size() - 1, p->deadTickIndex + 1);
+        }
         else if (p->counter == 0)
+        {
+            DPRINTF(DecayCache, "Counter == 0, decreasing deadTickIndex\n");
             p->deadTickIndex = std::max(0, p->deadTickIndex - 1);
+        }
 
         p->alive = true;
     }
@@ -161,6 +169,7 @@ DecayCache::updateCounter(CacheBlk *blk)
         {
             PacketList writebacks;
             PacketPtr pkt = Cache::evictBlock(blk);
+            DPRINTF(DecayCache, "Decaying alive block at %x\n", pkt->getBlockAddr(blkSize));
             if (pkt) {
                 writebacks.push_back(pkt);
             }
