@@ -64,13 +64,12 @@ class DecayCache : public Cache
     struct BlockState
     {
         uint8_t counter = 0;
-        uint8_t deadTickIndex = 0;
+        uint8_t tickIndex = 0;
         bool alive = true;
     };
 
     std::unordered_map<CacheBlk *, BlockState> blkStates;
-    Cycles aliveTickPeriod;
-    std::vector<Cycles> deadTickPeriods;
+    std::vector<Cycles> tickPeriods;
 
   public:
     DecayCache(const DecayCacheParams &p);

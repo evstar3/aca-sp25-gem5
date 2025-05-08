@@ -51,26 +51,19 @@ namespace gem5
 
 DecayCache::DecayCache(const DecayCacheParams &p)
     : Cache(p),
-      aliveTickPeriod(p.alive_tick_period),
-      deadTickPeriods(p.dead_tick_periods)
+      tickPeriods(p.tick_periods)
 {
 }
 
 void
 DecayCache::startup()
 {
-    // schedule alive tick
-    schedule(
-        new EventFunctionWrapper([this] { processGlobalTick(true, 0); }, name() + ".aliveGlobalTick"),
-        cyclesToTicks(Cycles(aliveTickPeriod))
-    );
-
-    // schedule each dead tick
-    for (uint8_t index = 0; index < deadTickPeriods.size(); ++index)
+    // schedule each tick
+    for (uint8_t index = 0; index < tickPeriods.size(); ++index)
     {
         schedule(
             new EventFunctionWrapper([this, index] { processGlobalTick(false, index); }, name() + ".deadGlobalTick"),
-            cyclesToTicks(Cycles(deadTickPeriods[index]))
+            cyclesToTicks(Cycles(tickPeriods[index]))
         );
     }
 }
@@ -102,13 +95,13 @@ DecayCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
         DPRINTF(DecayCache, "Accessing dead block at %x\n", pkt->getBlockAddr(blkSize));
         if (p->counter == 3)
         {
-            DPRINTF(DecayCache, "Counter == 3, increasing deadTickIndex\n");
-            p->deadTickIndex = std::min<std::size_t>(deadTickPeriods.size() - 1, p->deadTickIndex + 1);
+            DPRINTF(DecayCache, "Counter == 3, increasing tickIndex\n");
+            p->tickIndex = std::min<std::size_t>(tickPeriods.size() - 1, p->tickIndex + 1);
         }
         else if (p->counter == 0)
         {
-            DPRINTF(DecayCache, "Counter == 0, decreasing deadTickIndex\n");
-            p->deadTickIndex = std::max(0, p->deadTickIndex - 1);
+            DPRINTF(DecayCache, "Counter == 0, decreasing tickIndex\n");
+            p->tickIndex = std::max(0, p->tickIndex - 1);
         }
 
         p->alive = true;
@@ -134,7 +127,7 @@ DecayCache::processGlobalTick(bool alive, uint8_t index)
                 return;
 
             // only update counter if this global tick is at the rate of the dead block
-            if (!state.alive && state.deadTickIndex != index)
+            if (!state.alive && state.tickIndex != index)
                 return;
 
             schedule(
@@ -151,7 +144,7 @@ DecayCache::processGlobalTick(bool alive, uint8_t index)
             [this, alive, index] { processGlobalTick(alive, index); },
             name() + (alive ? ".alive" : ".dead") + "GlobalTick"
         ),
-        cyclesToTicks(curCycle() + Cycles(alive ? aliveTickPeriod : deadTickPeriods[index]))
+        cyclesToTicks(curCycle() + Cycles(tickPeriods[index]))
     );
 }
 
