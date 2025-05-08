@@ -42,6 +42,8 @@ class L1DCache(DecayCache):
     tgts_per_mshr = 20
     writeback_clean=True
 
+    tick_periods = [10000]
+
 class L2Cache(Cache):
     size = '1MiB'
     assoc = 8

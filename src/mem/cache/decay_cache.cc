@@ -61,9 +61,11 @@ DecayCache::startup()
     // schedule each tick
     for (uint8_t index = 0; index < tickPeriods.size(); ++index)
     {
+        Cycles period = tickPeriods[index];
+        DPRINTF(DecayCache, "Sechduling tick_period=%u\n", period);
         schedule(
-            new EventFunctionWrapper([this, index] { processGlobalTick(false, index); }, name() + ".deadGlobalTick"),
-            cyclesToTicks(Cycles(tickPeriods[index]))
+            new EventFunctionWrapper([this, index] { processGlobalTick(index); }, name() + ".deadGlobalTick"),
+            cyclesToTicks(Cycles(period))
         );
     }
 }
@@ -113,20 +115,17 @@ DecayCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
 }
 
 void
-DecayCache::processGlobalTick(bool alive, uint8_t index)
+DecayCache::processGlobalTick(uint8_t index)
 {
+    DPRINTF(DecayCache, "Proccessing Global Tick for %u\n", tickPeriods[index]);
     unsigned i = 1;
 
     // schedule cascading counter updates
     tags->forEachBlk(
-        [this, alive, index, &i](CacheBlk &blk) {
+        [this, index, &i](CacheBlk &blk) {
             BlockState state = blkStates[&blk];
 
-            // only update counter if this global tick matches the state of the block
-            if (state.alive != alive)
-                return;
-
-            // only update counter if this global tick is at the rate of the dead block
+            // only update counter if this global tick is at the rate of the block
             if (!state.alive && state.tickIndex != index)
                 return;
 
@@ -141,8 +140,8 @@ DecayCache::processGlobalTick(bool alive, uint8_t index)
     // schedule the next tick
     schedule(
         new EventFunctionWrapper(
-            [this, alive, index] { processGlobalTick(alive, index); },
-            name() + (alive ? ".alive" : ".dead") + "GlobalTick"
+            [this, index] { processGlobalTick(index); },
+            name() + ".globalTick"
         ),
         cyclesToTicks(curCycle() + Cycles(tickPeriods[index]))
     );
@@ -170,6 +169,7 @@ DecayCache::updateCounter(CacheBlk *blk)
         }
     }
 
+    DPRINTF(DecayCache, "Increasing counter\n");
     p->counter = std::min(3, p->counter + 1);
 }
 

@@ -80,7 +80,7 @@ class DecayCache : public Cache
                 PacketList &writebacks) override;
 
   private:
-    void processGlobalTick(bool alive, uint8_t index);
+    void processGlobalTick(uint8_t index);
     void updateCounter(CacheBlk *blk);
 };
 
