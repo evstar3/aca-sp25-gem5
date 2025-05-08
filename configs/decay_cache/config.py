@@ -61,7 +61,7 @@ system.system_port = system.membus.slave
 
 # Create a process (barebones for now)
 process = Process()
-process.cmd = ['tests/test-progs/hello/bin/x86/linux/hello']  # Replace with your actual benchmark
+process.cmd = ['tests/test-progs/hello/bin/x86/linux/hello'] # can be replaced with a different benchmark
 system.cpu.workload = process
 system.cpu.createThreads()
 
