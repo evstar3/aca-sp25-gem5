@@ -126,12 +126,12 @@ DecayCache::processGlobalTick(uint8_t index)
             BlockState state = blkStates[&blk];
 
             // only update counter if this global tick is at the rate of the block
-            if (!state.alive && state.tickIndex != index)
+            if (state.tickIndex != index)
                 return;
 
             schedule(
                 new EventFunctionWrapper([this, &blk] { updateCounter(&blk); }, name() + ".updateCounter"),
-                cyclesToTicks(curCycle() + Cycles(i))
+                clockEdge(Cycles(3 * i))
             );
             ++i;
         }
@@ -159,18 +159,30 @@ DecayCache::updateCounter(CacheBlk *blk)
 
         if (blk->isValid())
         {
-            PacketList writebacks;
             PacketPtr pkt = Cache::evictBlock(blk);
-            DPRINTF(DecayCache, "Decaying alive block at %x\n", pkt->getBlockAddr(blkSize));
-            if (pkt) {
+            if (pkt)
+            {
+                PacketList writebacks;
+                DPRINTF(DecayCache, "Tick %llu: Decaying alive block at %x\n", curTick(), pkt->getBlockAddr(blkSize));
+                decays++;
                 writebacks.push_back(pkt);
+                doWritebacks(writebacks, clockEdge(Cycles(0)));
             }
-            doWritebacks(writebacks, 0);
         }
     }
 
     DPRINTF(DecayCache, "Increasing counter\n");
     p->counter = std::min(3, p->counter + 1);
+}
+
+void
+DecayCache::regStats()
+{
+    Cache::regStats();
+
+    decays.name(name() + ".decays")
+        .desc("Number of decays")
+        ;
 }
 
 } // namespace gem5

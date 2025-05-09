@@ -71,9 +71,13 @@ class DecayCache : public Cache
     std::unordered_map<CacheBlk *, BlockState> blkStates;
     std::vector<Cycles> tickPeriods;
 
+  private:
+    statistics::Scalar decays;
+
   public:
     DecayCache(const DecayCacheParams &p);
     void startup() override;
+    void regStats() override;
 
   protected:
     bool access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
