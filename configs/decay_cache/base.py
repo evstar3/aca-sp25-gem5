@@ -7,6 +7,7 @@ from pathlib import Path
 
 parser = argparse.ArgumentParser()
 parser.add_argument('binary', type=Path)
+parser.add_argument('rest', nargs=argparse.REMAINDER)
 args = parser.parse_args()
 
 # Create the system
@@ -108,7 +109,7 @@ binary_str = str(args.binary)
 system.workload = SEWorkload.init_compatible(binary_str)
 
 process = Process()
-process.cmd = [binary_str]
+process.cmd = [binary_str] + args.rest
 system.cpu.workload = process
 system.cpu.createThreads()
 
