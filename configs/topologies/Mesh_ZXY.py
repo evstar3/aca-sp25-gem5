@@ -122,7 +122,7 @@ class Mesh_XYZ(SimpleTopology):
         # Create the mesh links.
         int_links = []
 
-        # East output to West input links (weight = 1)
+        # East output to West input links (weight = 2)
         for layer in range(num_layers):
             for row in range(num_rows):
                 for col in range(num_columns):
@@ -137,12 +137,12 @@ class Mesh_XYZ(SimpleTopology):
                                 src_outport="East",
                                 dst_inport="West",
                                 latency=link_latency,
-                                weight=1,
+                                weight=2,
                             )
                         )
                         link_count += 1
 
-        # West output to East input links (weight = 1)
+        # West output to East input links (weight = 2)
         for layer in range(num_layers):
             for row in range(num_rows):
                 for col in range(num_columns):
@@ -157,12 +157,12 @@ class Mesh_XYZ(SimpleTopology):
                                 src_outport="West",
                                 dst_inport="East",
                                 latency=link_latency,
-                                weight=1,
+                                weight=2,
                             )
                         )
                         link_count += 1
 
-        # North output to South input links (weight = 2)
+        # North output to South input links (weight = 3)
         for layer in range(num_layers):
             for col in range(num_columns):
                 for row in range(num_rows):
@@ -177,12 +177,12 @@ class Mesh_XYZ(SimpleTopology):
                                 src_outport="North",
                                 dst_inport="South",
                                 latency=link_latency,
-                                weight=2,
+                                weight=3,
                             )
                         )
                         link_count += 1
 
-        # South output to North input links (weight = 2)
+        # South output to North input links (weight = 3)
         for layer in range(num_layers):
             for col in range(num_columns):
                 for row in range(num_rows):
@@ -197,12 +197,12 @@ class Mesh_XYZ(SimpleTopology):
                                 src_outport="South",
                                 dst_inport="North",
                                 latency=link_latency,
-                                weight=2,
+                                weight=3,
                             )
                         )
                         link_count += 1
 
-        # Up output to Down input links (weight = 3)
+        # Up output to Down input links (weight = 1)
         for layer in range(num_layers):
             for col in range(num_columns):
                 for row in range(num_rows):
@@ -217,12 +217,12 @@ class Mesh_XYZ(SimpleTopology):
                                 src_outport="Up",
                                 dst_inport="Down",
                                 latency=link_latency,
-                                weight=3,
+                                weight=1,
                             )
                         )
                         link_count += 1
 
-        # Down output to Up input links (weight = 3)
+        # Down output to Up input links (weight = 1)
         for layer in range(num_layers):
             for col in range(num_columns):
                 for row in range(num_rows):
@@ -237,7 +237,7 @@ class Mesh_XYZ(SimpleTopology):
                                 src_outport="Down",
                                 dst_inport="Up",
                                 latency=link_latency,
-                                weight=3,
+                                weight=1,
                             )
                         )
                         link_count += 1
