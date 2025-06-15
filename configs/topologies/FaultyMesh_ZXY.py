@@ -31,14 +31,16 @@ from topologies.BaseTopology import SimpleTopology
 from m5.objects import *
 from m5.params import *
 
+from random import random
+
 # Creates a generic Mesh assuming an equal number of cache
 # and directory controllers.
 # ZXY routing is enforced (using link weights)
 # to guarantee deadlock freedom.
+# Links between layers (between Z planes) have a random chance to not be instantiated
 
-
-class Mesh_ZXY(SimpleTopology):
-    description = "Mesh_ZXY"
+class FaultyMesh_ZXY(SimpleTopology):
+    description = "FaultyMesh_ZXY"
 
     def __init__(self, controllers):
         self.nodes = controllers
@@ -202,10 +204,15 @@ class Mesh_ZXY(SimpleTopology):
                         )
                         link_count += 1
 
+        fault_probability = 0.25
+
         # Up output to Down input links (weight = 1)
         for layer in range(num_layers):
             for col in range(num_columns):
                 for row in range(num_rows):
+                    if random() < fault_probability:
+                        continue
+
                     if layer + 1 < num_layers:
                         up_out = col + (row * num_columns) + (layer * num_rows * num_columns)
                         down_in = col + (row * num_columns) + ((layer + 1) * num_rows * num_columns)
@@ -222,11 +229,7 @@ class Mesh_ZXY(SimpleTopology):
                         )
                         link_count += 1
 
-        # Down output to Up input links (weight = 1)
-        for layer in range(num_layers):
-            for col in range(num_columns):
-                for row in range(num_rows):
-                    if layer + 1 < num_layers:
+                        # Down output to Up input links (weight = 1)
                         up_in = col + (row * num_columns) + (layer * num_rows * num_columns)
                         down_out = col + (row * num_columns) + ((layer + 1) * num_rows * num_columns)
                         int_links.append(
