@@ -33,6 +33,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <chrono>
 
 #include "base/logging.hh"
 #include "base/statistics.hh"
@@ -105,6 +106,9 @@ GarnetSyntheticTraffic::GarnetSyntheticTraffic(const Params &p)
     id = TESTER_NETWORK++;
     DPRINTF(GarnetSyntheticTraffic,"Config Created: Name = %s , and id = %d\n",
             name(), id);
+
+    // hack. a seed should be passed from the command line but I can't be bothered right now
+    rng->init(std::chrono::high_resolution_clock::now());
 }
 
 Port &

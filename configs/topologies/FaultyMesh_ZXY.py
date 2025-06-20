@@ -204,7 +204,7 @@ class FaultyMesh_ZXY(SimpleTopology):
                         )
                         link_count += 1
 
-        fault_probability = 0.25
+        fault_probability = options.fault_rate
 
         # Up output to Down input links (weight = 1)
         for layer in range(num_layers):
