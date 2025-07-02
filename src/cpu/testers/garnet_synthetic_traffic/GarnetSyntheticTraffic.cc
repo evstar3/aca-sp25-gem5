@@ -33,7 +33,7 @@
 #include <set>
 #include <string>
 #include <vector>
-#include <chrono>
+#include <ctime>
 
 #include "base/logging.hh"
 #include "base/statistics.hh"
@@ -108,7 +108,8 @@ GarnetSyntheticTraffic::GarnetSyntheticTraffic(const Params &p)
             name(), id);
 
     // hack. a seed should be passed from the command line but I can't be bothered right now
-    rng->init(std::chrono::high_resolution_clock::now());
+    // this isn't even a high precision timer. I hope the jobs take >1sec
+    rng->init(std::time(nullptr));
 }
 
 Port &
