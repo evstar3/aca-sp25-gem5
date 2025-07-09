@@ -267,7 +267,72 @@ RoutingUnit::outportComputeCustom(RouteInfo route,
                                  int inport,
                                  PortDirection inport_dirn)
 {
-    panic("%s placeholder executed", __FUNCTION__);
+    PortDirection outport_dirn = "Unknown";
+
+    [[maybe_unused]] int num_rows = m_router->get_net_ptr()->getNumRows();
+    int num_cols = m_router->get_net_ptr()->getNumCols();
+    int num_layers = m_router->get_net_ptr()->getNumLayers();
+    assert(num_rows > 0);
+    assert(num_cols > 0);
+    assert(num_layers > 0);
+
+    int my_id = m_router->get_id();
+    int my_z = my_id / (num_rows * num_cols);
+    int my_y = (my_id % (num_rows * num_cols)) / num_cols;
+    int my_x = (my_id % (num_rows * num_cols)) % num_cols;
+
+    int dest_id = route.dest_router;
+    int dest_z = dest_id / (num_rows * num_cols);
+    int dest_y = (dest_id % (num_rows * num_cols)) / num_cols;
+    int dest_x = (dest_id % (num_rows * num_cols)) % num_cols;
+
+    int z_hops = abs(dest_z - my_z);
+    int y_hops = abs(dest_y - my_y);
+    int x_hops = abs(dest_x - my_x);
+
+    bool z_dirn = (dest_z >= my_z);
+    bool y_dirn = (dest_y >= my_y);
+    bool x_dirn = (dest_x >= my_x);
+
+    // already checked that in outportCompute() function
+    assert(!(x_hops == 0 && y_hops == 0 && z_hops == 0));
+
+    if (z_hops > 0) {
+        outport_dirn = z_dirn ? "Up" : "Down";
+
+        if (m_outports_dirn2idx.count(outport_dirn) == 0)
+        {
+            // uh-oh, that Z-link is faulty!
+            
+            if (x_hops > 0) // try x direction first
+                outport_dirn = x_dirn ? "East" : "West";
+            else if (y_hops > 0) // then try y
+                outport_dirn = y_dirn ? "North" : "South";
+            else
+            {
+                // the destination node is directly above or below but the link is faulty.
+                // if we're on the edge, pick the only x direction with a link
+                // otherwise pick a random outport in the x direction
+                if (m_outports_dirn2idx.count("East") == 0)
+                    outport_dirn = "West";
+                else if (m_outports_dirn2idx.count("West") == 0)
+                    outport_dirn = "East";
+                else
+                    outport_dirn = rand() % 2 ? "East" : "West";
+            }
+        }
+    } else if (x_hops > 0) {
+        outport_dirn = x_dirn ? "East" : "West";
+    } else if (y_hops > 0) {
+        outport_dirn = y_dirn ? "North" : "South";
+    } else {
+        // x_hops == 0 and y_hops == 0 and z_hops == 0
+        // this is not possible
+        // already checked that in outportCompute() function
+        panic("x_hops == y_hops == z_hops == 0");
+    }
+
+    return m_outports_dirn2idx[outport_dirn];
 }
 
 } // namespace garnet

@@ -33,10 +33,8 @@ from m5.params import *
 
 from random import random
 
-# Creates a generic Mesh assuming an equal number of cache
-# and directory controllers.
-# ZXY routing is enforced (using link weights)
-# to guarantee deadlock freedom.
+# Creates a generic Mesh assuming an equal number of cache and directory controllers.
+# ZXY routing is enforced using custom routing algorithm in RoutingUnit.cc
 # Links between layers (between Z planes) have a random chance to not be instantiated
 
 class FaultyMesh_ZXY(SimpleTopology):
@@ -53,7 +51,7 @@ class FaultyMesh_ZXY(SimpleTopology):
 
         num_routers = options.num_cpus
         num_rows = options.mesh_rows
-        num_layers = 2
+        num_cols = options.mesh_cols
 
         # default values for link latency and router latency.
         # Can be over-ridden on a per link/router basis
@@ -63,11 +61,13 @@ class FaultyMesh_ZXY(SimpleTopology):
         # There must be an evenly divisible number of cntrls to routers
         cntrls_per_router, remainder = divmod(len(nodes), num_routers)
 
-        # Also, obviously the number or rows must be <= the number of routers
-        assert num_rows > 0 and num_rows <= int(num_routers / num_layers)
+        assert num_rows > 0 and num_rows <= num_routers
+        assert num_cols > 0 and num_rows <= num_routers
 
-        num_columns = int(int(num_routers / num_layers) / num_rows)
-        assert num_columns * num_rows * num_layers == num_routers
+        assert num_rows * num_cols <= num_routers
+
+        num_layers = num_routers // (num_rows * num_cols)
+        assert num_cols * num_rows * num_layers == num_routers
 
         # Create the routers in the mesh
         routers = [
@@ -124,13 +124,16 @@ class FaultyMesh_ZXY(SimpleTopology):
         # Create the mesh links.
         int_links = []
 
-        # East output to West input links (weight = 2)
+        # (0, 0, 0) is down-bottom-left
+        # column varies the fastest, then row, then layer
+
+        # East output to West input links
         for layer in range(num_layers):
             for row in range(num_rows):
-                for col in range(num_columns):
-                    if col + 1 < num_columns:
-                        east_out = col + (row * num_columns) + (layer * num_rows * num_columns)
-                        west_in = (col + 1) + (row * num_columns) + (layer * num_rows * num_columns)
+                for col in range(num_cols):
+                    if col + 1 < num_cols:
+                        east_out = col + (row * num_cols) + (layer * num_rows * num_cols)
+                        west_in = (col + 1) + (row * num_cols) + (layer * num_rows * num_cols)
                         int_links.append(
                             IntLink(
                                 link_id=link_count,
@@ -139,18 +142,17 @@ class FaultyMesh_ZXY(SimpleTopology):
                                 src_outport="East",
                                 dst_inport="West",
                                 latency=link_latency,
-                                weight=2,
                             )
                         )
                         link_count += 1
 
-        # West output to East input links (weight = 2)
+        # West output to East input links
         for layer in range(num_layers):
             for row in range(num_rows):
-                for col in range(num_columns):
-                    if col + 1 < num_columns:
-                        east_in = col + (row * num_columns) + (layer * num_rows * num_columns)
-                        west_out = (col + 1) + (row * num_columns) + (layer * num_rows * num_columns)
+                for col in range(num_cols):
+                    if col + 1 < num_cols:
+                        east_in = col + (row * num_cols) + (layer * num_rows * num_cols)
+                        west_out = (col + 1) + (row * num_cols) + (layer * num_rows * num_cols)
                         int_links.append(
                             IntLink(
                                 link_id=link_count,
@@ -159,18 +161,17 @@ class FaultyMesh_ZXY(SimpleTopology):
                                 src_outport="West",
                                 dst_inport="East",
                                 latency=link_latency,
-                                weight=2,
                             )
                         )
                         link_count += 1
 
-        # North output to South input links (weight = 3)
+        # North output to South input links
         for layer in range(num_layers):
-            for col in range(num_columns):
-                for row in range(num_rows):
+            for row in range(num_rows):
+                for col in range(num_cols):
                     if row + 1 < num_rows:
-                        north_out = col + (row * num_columns) + (layer * num_rows * num_columns)
-                        south_in = col + ((row + 1) * num_columns) + (layer * num_rows * num_columns)
+                        north_out = col + (row * num_cols) + (layer * num_rows * num_cols)
+                        south_in = col + ((row + 1) * num_cols) + (layer * num_rows * num_cols)
                         int_links.append(
                             IntLink(
                                 link_id=link_count,
@@ -179,18 +180,17 @@ class FaultyMesh_ZXY(SimpleTopology):
                                 src_outport="North",
                                 dst_inport="South",
                                 latency=link_latency,
-                                weight=3,
                             )
                         )
                         link_count += 1
 
-        # South output to North input links (weight = 3)
+        # South output to North input links
         for layer in range(num_layers):
-            for col in range(num_columns):
-                for row in range(num_rows):
+            for row in range(num_rows):
+                for col in range(num_cols):
                     if row + 1 < num_rows:
-                        north_in = col + (row * num_columns) + (layer * num_rows * num_columns)
-                        south_out = col + ((row + 1) * num_columns) + (layer * num_rows * num_columns)
+                        north_in = col + (row * num_cols) + (layer * num_rows * num_cols)
+                        south_out = col + ((row + 1) * num_cols) + (layer * num_rows * num_cols)
                         int_links.append(
                             IntLink(
                                 link_id=link_count,
@@ -199,23 +199,22 @@ class FaultyMesh_ZXY(SimpleTopology):
                                 src_outport="South",
                                 dst_inport="North",
                                 latency=link_latency,
-                                weight=3,
                             )
                         )
                         link_count += 1
 
         fault_probability = options.fault_rate
 
-        # Up output to Down input links (weight = 1)
+        # Up output to Down input links
         for layer in range(num_layers):
-            for col in range(num_columns):
-                for row in range(num_rows):
+            for row in range(num_rows):
+                for col in range(num_cols):
                     if random() < fault_probability:
                         continue
 
                     if layer + 1 < num_layers:
-                        up_out = col + (row * num_columns) + (layer * num_rows * num_columns)
-                        down_in = col + (row * num_columns) + ((layer + 1) * num_rows * num_columns)
+                        up_out = col + (row * num_cols) + (layer * num_rows * num_cols)
+                        down_in = col + (row * num_cols) + ((layer + 1) * num_rows * num_cols)
                         int_links.append(
                             IntLink(
                                 link_id=link_count,
@@ -224,14 +223,13 @@ class FaultyMesh_ZXY(SimpleTopology):
                                 src_outport="Up",
                                 dst_inport="Down",
                                 latency=link_latency,
-                                weight=1,
                             )
                         )
                         link_count += 1
 
-                        # Down output to Up input links (weight = 1)
-                        up_in = col + (row * num_columns) + (layer * num_rows * num_columns)
-                        down_out = col + (row * num_columns) + ((layer + 1) * num_rows * num_columns)
+                        # Down output to Up input links
+                        up_in = col + (row * num_cols) + (layer * num_rows * num_cols)
+                        down_out = col + (row * num_cols) + ((layer + 1) * num_rows * num_cols)
                         int_links.append(
                             IntLink(
                                 link_id=link_count,
@@ -240,7 +238,6 @@ class FaultyMesh_ZXY(SimpleTopology):
                                 src_outport="Down",
                                 dst_inport="Up",
                                 latency=link_latency,
-                                weight=1,
                             )
                         )
                         link_count += 1
