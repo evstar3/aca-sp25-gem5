@@ -297,30 +297,21 @@ RoutingUnit::outportComputeCustom(RouteInfo route,
     // already checked that in outportCompute() function
     assert(!(x_hops == 0 && y_hops == 0 && z_hops == 0));
 
+    PortDirection backup_dirn = "Unknown";
+    if (my_x == 0 || inport_dirn == "West")
+        backup_dirn = "East";
+    else if (my_x == num_cols - 1 || inport_dirn == "East")
+        backup_dirn = "West";
+    else
+        backup_dirn = rand() % 2 ? "East" : "West";
+
     if (z_hops > 0) {
         outport_dirn = z_dirn ? "Up" : "Down";
 
+        // faulty z-link
         if (m_outports_dirn2idx.count(outport_dirn) == 0)
-        {
-            // uh-oh, that Z-link is faulty!
-            
-            if (x_hops > 0) // try x direction first
-                outport_dirn = x_dirn ? "East" : "West";
-            else if (y_hops > 0) // then try y
-                outport_dirn = y_dirn ? "North" : "South";
-            else
-            {
-                // the destination node is directly above or below but the link is faulty.
-                // if we're on the edge, pick the only x direction with a link
-                // otherwise pick a random outport in the x direction
-                if (m_outports_dirn2idx.count("East") == 0)
-                    outport_dirn = "West";
-                else if (m_outports_dirn2idx.count("West") == 0)
-                    outport_dirn = "East";
-                else
-                    outport_dirn = rand() % 2 ? "East" : "West";
-            }
-        }
+            outport_dirn = backup_dirn;
+
     } else if (x_hops > 0) {
         outport_dirn = x_dirn ? "East" : "West";
     } else if (y_hops > 0) {
