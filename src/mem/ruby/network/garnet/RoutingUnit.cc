@@ -298,20 +298,49 @@ RoutingUnit::outportComputeCustom(RouteInfo route,
     assert(!(x_hops == 0 && y_hops == 0 && z_hops == 0));
 
     PortDirection backup_dirn = "Unknown";
-    if (my_x == 0 || inport_dirn == "West")
-        backup_dirn = "East";
-    else if (my_x == num_cols - 1 || inport_dirn == "East")
-        backup_dirn = "West";
-    else
-        backup_dirn = rand() % 2 ? "East" : "West";
+
+    bool this_east_edge = my_x == num_cols - 1;
+    bool this_west_edge = my_x == 0;
+    bool this_north_edge = my_y == num_rows - 1;
+    bool this_south_edge = my_y == 0;
+
+    if (inport_dirn == "East") {
+        if (this_west_edge and num_rows == 1)
+            backup_dirn = "Drop";
+        else if (this_west_edge && this_north_edge)
+            backup_dirn = "South";
+        else if (this_west_edge)
+            backup_dirn = "North";
+        else
+            backup_dirn = "East";
+    } else if (inport_dirn == "South") {
+        if (this_north_edge)
+            backup_dirn = "South";
+        else
+            backup_dirn = "North";
+    } else if (inport_dirn== "North") {
+        if (this_south_edge)
+            backup_dirn = "Drop";
+        else
+            backup_dirn = "South";
+    } else {
+        if (num_cols == 1 && num_rows == 1)
+            backup_dirn = "Drop";
+        else if (this_north_edge && num_cols == 1)
+            backup_dirn = "South";
+        else if (num_cols == 1)
+            backup_dirn = "North";
+        else if (this_east_edge)
+            backup_dirn = "West";
+        else
+            backup_dirn = "East";
+    }
 
     if (z_hops > 0) {
         outport_dirn = z_dirn ? "Up" : "Down";
-
         // faulty z-link
         if (m_outports_dirn2idx.count(outport_dirn) == 0)
             outport_dirn = backup_dirn;
-
     } else if (x_hops > 0) {
         outport_dirn = x_dirn ? "East" : "West";
     } else if (y_hops > 0) {
@@ -322,6 +351,9 @@ RoutingUnit::outportComputeCustom(RouteInfo route,
         // already checked that in outportCompute() function
         panic("x_hops == y_hops == z_hops == 0");
     }
+
+    if (outport_dirn == "Drop")
+        panic("outport_dirn == \"Drop\"");
 
     return m_outports_dirn2idx[outport_dirn];
 }
