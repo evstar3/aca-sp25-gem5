@@ -312,13 +312,13 @@ RoutingUnit::outportComputeCustom(RouteInfo route,
         else if (this_west_edge)
             backup_dirn = "North";
         else
-            backup_dirn = "East";
+            backup_dirn = "West";
     } else if (inport_dirn == "South") {
         if (this_north_edge)
             backup_dirn = "South";
         else
             backup_dirn = "North";
-    } else if (inport_dirn== "North") {
+    } else if (inport_dirn == "North") {
         if (this_south_edge)
             backup_dirn = "Drop";
         else
